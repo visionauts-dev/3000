@@ -3,7 +3,21 @@ import { io, Socket } from "socket.io-client";
 import { useGameStore } from "../stores/gameStore";
 import { GameMatch, GameState, Card } from "../types";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+const SOCKET_URL =
+  import.meta.env.VITE_WS_URL || import.meta.env.VITE_API_URL || "http://localhost:3001";
+
+const isWs = typeof SOCKET_URL === "string" && (SOCKET_URL.startsWith("ws:") || SOCKET_URL.startsWith("wss:") || SOCKET_URL.startsWith("http"));
+
+const ioOptions: any = {
+  reconnection: true,
+  reconnectionDelay: 1000,
+  reconnectionAttempts: 10,
+};
+
+// If an explicit ws/wss URL is provided, prefer websocket transport to avoid polling fallback to localhost
+if (isWs && SOCKET_URL.startsWith("ws") || SOCKET_URL.startsWith("wss")) {
+  ioOptions.transports = ["websocket"];
+}
 
 export const useWebSocket = (gameId: string | null, playerId: string | null) => {
   const socketRef = useRef<Socket | null>(null);
@@ -13,11 +27,7 @@ export const useWebSocket = (gameId: string | null, playerId: string | null) => 
     if (!gameId || !playerId) return;
     if (socketRef.current?.connected) return;
 
-    const socket = io(API_URL, {
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionAttempts: 10,
-    });
+    const socket = io(SOCKET_URL, ioOptions);
 
     socket.on("connect", () => {
       setConnected(true);
