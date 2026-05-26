@@ -5,7 +5,11 @@ import { io, Socket } from "socket.io-client";
 import { LobbyRoom, MatchType } from "../types";
 import { useLobbyStore, getOrCreatePlayerId } from "../stores/lobbyStore";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+const SOCKET_URL = import.meta.env.VITE_WS_URL || import.meta.env.VITE_API_URL || "http://localhost:3001";
+const ioOptions: any = { reconnection: true, reconnectionDelay: 1000 };
+if (typeof SOCKET_URL === "string" && (SOCKET_URL.startsWith("ws:") || SOCKET_URL.startsWith("wss:"))) {
+  ioOptions.transports = ["websocket"];
+}
 
 export const LobbyPage: React.FC = () => {
   const navigate = useNavigate();
@@ -31,7 +35,7 @@ export const LobbyPage: React.FC = () => {
 
   const connectSocket = useCallback(() => {
     if (socketRef.current) return socketRef.current;
-    const socket = io(API_URL, { reconnection: true, reconnectionDelay: 1000 });
+    const socket = io(SOCKET_URL, ioOptions);
 
     socket.on("connect", () => setError(null));
     socket.on("disconnect", () => setError("Disconnected from server"));
